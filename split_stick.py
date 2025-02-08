@@ -1,42 +1,51 @@
 from __future__ import annotations
 import random
 
-def swap(tokens: list, cer: float, wer: float) -> tuple[list, list[int]]:
-    flagged_for_change = list(range(len(tokens)))  # تمام داده‌ها انتخاب می‌شوند
+def swap(tokens: list, cer: float=0.2, wer: float=0.5) -> tuple[list, list[int]]:
+    modified_indices = []  # برای ذخیره ایندکس‌هایی که تغییر کرده‌اند
 
-    for for_change in flagged_for_change:
-        token_for_change = tokens[for_change]
+    for i, token in enumerate(tokens):
+        original_token = token
 
         # تعداد کلمات انتخابی برای تغییر بر اساس WER محاسبه می‌شود
-        num_words_to_change = max(1, int(len(token_for_change.split()) * wer))
-        words = token_for_change.split()
+        words = token.split()
+        num_words_to_change = max(1, int(len(words) * wer))  # تعداد کلمات برای تغییر
 
         # انتخاب کلمات برای تغییر
-        words_to_change_indices = random.sample(range(len(words)), num_words_to_change)
+        words_to_change_indices = random.sample(range(len(words)), min(num_words_to_change, len(words)))
 
-        # تغییرات را اعمال کن: جابجایی تصادفی حروف در داخل کلمات انتخاب‌شده
+        # تغییرات را اعمال کن: جابجایی حرف در داخل کلمات انتخاب‌شده
         for idx in words_to_change_indices:
             word = words[idx]
-            if len(word) > 2:  # اطمینان از امکان جابجایی حروف
-                num_swaps = max(1, int(len(word) * cer))
+            if len(word) > 4:  # اطمینان از اینکه کلمه بیشتر از 4 حرف دارد
+                num_swaps = max(1, int(len(word) * cer))  # تعداد جابجایی‌ها با توجه به cer
+
+                # جابجایی حروف به صورت زوجی (فقط یک حرف بعد از خود)
                 for _ in range(num_swaps):
-                    # انتخاب دو موقعیت تصادفی برای جابجایی
-                    pos1, pos2 = random.sample(range(len(word)), 2)
-                    # جابجایی حروف
+                    if len(word) < 2:  # اگر کلمه کمتر از 2 حرف دارد، ادامه نمی‌دهیم
+                        break
+                    pos = random.randint(0, len(word) - 2)  # انتخاب یک موقعیت (جایی که جابجایی درست است)
+
+                    # جابجایی بین حرف pos و حرف pos+1
                     word_as_list = list(word)
-                    word_as_list[pos1], word_as_list[pos2] = word_as_list[pos2], word_as_list[pos1]
+                    word_as_list[pos], word_as_list[pos + 1] = word_as_list[pos + 1], word_as_list[pos]
 
                     word = ''.join(word_as_list)
 
                 words[idx] = word
+                modified_indices.append(i)  # ذخیره ایندکس تغییر یافته
 
-        tokens[for_change] = ' '.join(words)
+        tokens[i] = ' '.join(words)
 
-    return tokens
+    return tokens, modified_indices  # اطمینان از بازگشت دو مقدار
+
+# مثال استفاده
+#tokens = ["سلام دوستان", "این یک تست است", "امتحان جابجایی", "تست", "آزمایش"]
+#cer = 0.2  # نرخ خطای کاراکتر
+#wer = 0.5  # نرخ خطای کلمه
 
 
-
-def split(tokens: list, cer: float, wer: float) -> tuple[list, list[int]]:
+def split(tokens: list, cer: float= 0.2, wer: float=0.5) -> tuple[list, list[int]]:
     flagged_for_change = list(range(len(tokens)))  # تمام داده‌ها انتخاب می‌شوند
 
 
@@ -54,7 +63,7 @@ def split(tokens: list, cer: float, wer: float) -> tuple[list, list[int]]:
         # تغییرات را اعمال کن: اضافه کردن فاصله در داخل کلمات انتخاب‌شده
         for idx in words_to_change_indices:
             word = words[idx]
-            if len(word) > 1:  # اطمینان از امکان افزودن فاصله
+            if len(word) > 2:  # اطمینان از امکان افزودن فاصله
                 num_changes = max(1, int(len(word) * cer))
                 changes_indices = random.sample(range(1, len(word)), num_changes)
 
@@ -68,8 +77,11 @@ def split(tokens: list, cer: float, wer: float) -> tuple[list, list[int]]:
 
     return tokens
 
-def stick(tokens: list, wer: float) -> list:
+def stick(tokens: list,cer: float, wer: float=0.2) -> list:
     noisy_tokens = []  # لیست برای نگهداری جملات نویزدار
+    flagged_for_change = list(range(len(tokens)))  # تمام داده‌ها انتخاب می‌شوند
+    modified_indices = []  # برای ذخیره ایندکس‌هایی که تغییر کرده‌اند
+
     for sentence in tokens:
         words = sentence.split()  # شکستن جمله به کلمات
         if len(words) < 2:  # اگر جمله کمتر از دو کلمه داشته باشد، تغییری اعمال نشود
@@ -82,9 +94,12 @@ def stick(tokens: list, wer: float) -> list:
             words[idx] = words[idx] + words[idx + 1]
             del words[idx + 1]  # حذف کلمه بعدی
         noisy_tokens.append(" ".join(words))  # بازسازی جمله
-    return noisy_tokens
+    return noisy_tokens, modified_indices
 
-def insert(tokens: list, cer: float, wer: float, alphabet: str = "ابتثجحخدذرزسشصضطظعغفقکگلمنوهی") -> tuple[list, list[int]]:
+# مثال استفاده
+#noisy_tokens = ["سلام دوستان", "این یک تست است", "امتحان جابجایی", "تست", "آزمایش"]
+
+def insert(tokens: list, cer: float=0.1, wer: float=0.3, alphabet: str = "ابتثجحخدذرزسشصضطظعغفقکگلمنوهی") -> tuple[list, list[int]]:
     flagged_for_change = list(range(len(tokens)))  # تمام داده‌ها انتخاب می‌شوند
 
     for for_change in flagged_for_change:
@@ -115,7 +130,7 @@ def insert(tokens: list, cer: float, wer: float, alphabet: str = "ابتثجحخ
 
     return tokens
 
-def delete(tokens: list, cer: float, wer: float) -> tuple[list, list[int]]:
+def delete(tokens: list, cer: float=0.5, wer: float=0.1) -> tuple[list, list[int]]:
     flagged_for_change = list(range(len(tokens)))  # تمام داده‌ها انتخاب می‌شوند
 
     for for_change in flagged_for_change:
@@ -131,7 +146,7 @@ def delete(tokens: list, cer: float, wer: float) -> tuple[list, list[int]]:
         # تغییرات را اعمال کن: حذف حروف تصادفی از داخل کلمات انتخاب‌شده
         for idx in words_to_change_indices:
             word = words[idx]
-            if len(word) > 3:  # اگر طول کلمه بیشتر از 4 حرف باشد تغییرات را اعمال کن
+            if len(word) > 4:  # اگر طول کلمه بیشتر از 5 حرف باشد تغییرات را اعمال کن
                 num_changes = max(1, int(len(word) * cer))
                 changes_indices = random.sample(range(len(word)), num_changes)  # موقعیت‌هایی برای حذف حروف انتخاب کن
 
@@ -145,7 +160,7 @@ def delete(tokens: list, cer: float, wer: float) -> tuple[list, list[int]]:
 
     return tokens
 
-def replace(tokens: list[str], cer: float, wer: float, alphabet: str = "ابتثجحخدذرزسشصضطظعغفقکگلمنوهی") -> tuple[list[str], list[int]]:
+def replace(tokens: list[str], cer: float=0.5, wer: float=0.2, alphabet: str = "ابتثجحخدذرزسشصضطظعغفقکگلمنوهی") -> tuple[list[str], list[int]]:
     flagged_for_change = list(range(len(tokens)))  # تمام داده‌ها انتخاب می‌شوند
 
     for for_change in flagged_for_change:
@@ -161,7 +176,7 @@ def replace(tokens: list[str], cer: float, wer: float, alphabet: str = "ابتث
         # تغییرات را اعمال کن: حذف حروف تصادفی و جایگزینی آن‌ها با حروف دیگر
         for idx in words_to_change_indices:
             word = words[idx]
-            if len(word) > 3:  # اگر طول کلمه بیشتر از 4 حرف باشد تغییرات را اعمال کن
+            if len(word) > 4:  # اگر طول کلمه بیشتر از 5 حرف باشد تغییرات را اعمال کن
                 num_changes = max(1, int(len(word) * cer))
                 changes_indices = random.sample(range(len(word)), num_changes)  # موقعیت‌هایی برای جایگزینی حروف انتخاب کن
 
@@ -182,7 +197,7 @@ def replace(tokens: list[str], cer: float, wer: float, alphabet: str = "ابتث
     return tokens
 
 
-def replace_homophones(tokens: list[str]) -> list[str]:
+def replace_homophones(tokens: list[str], cer: float=0.3, wer: float=0.5) -> list[str]:
     """
     جایگزینی حروف هم‌آوا در کلمات با حروف هم‌آوای دیگر.
 
@@ -194,23 +209,43 @@ def replace_homophones(tokens: list[str]) -> list[str]:
     """
 
     homophone_map = {
-        'ا': [ 'آ'],
-        'ث': ['س', 'ص'],
-        'س': ['ث', 'ص'],
-        'ص': ['س' , 'ث'],
-        'ذ': ['ز' , 'ض'],
-        'ز': ['ذ', 'ض'],
-        'ض': ['ز' , 'ذ'],
+        'ا': ['آ'],
+        'آ': ['ا'],
+        'ب': ['پ'],
+        'پ': ['ب'],
         'ت': ['ط'],
         'ط': ['ت'],
+        'ث': ['س', 'ص'],
+        'س': ['ث', 'ص'],
+        'ص': ['س', 'ث'],
+        'ج': ['چ'],
+        'چ': ['ج'],
         'ح': ['ه'],
         'ه': ['ح'],
-        'ق': ['غ'],
-        'غ': ['ق'],
+        'خ': ['خ', 'ق', 'غ'],  # اضافه کردن هم‌آوای مختلف
+        'د': ['ذ', 'ض'],
+        'ذ': ['د', 'ز', 'ض'],
+        'ز': ['ذ', 'ض'],
+        'ژ': ['ز'],
+        'ش': ['ش', 'ص'],
+        'ص': ['س', 'ث', 'ش'],
+        'ض': ['ذ', 'ز'],
+        'ط': ['ت'],
+        'ظ': ['ذ', 'ز', 'ض'],
+        'ع': ['غ'],
+        'غ': ['ق', 'ع'],
+        'ف': ['پ'],
+        'ق': ['غ', 'خ'],
         'ک': ['گ'],
-        'گ': ['ک']
+        'گ': ['ک'],
+        'ل': ['ل'],
+        'م': ['م'],
+        'ن': ['ن'],
+        'و': ['و'],
+        'ه': ['ه'],
+        'ی': ['ئ'],
+        'ئ': ['ی']
     }
-
     modified_tokens = []
 
     for token in tokens:
