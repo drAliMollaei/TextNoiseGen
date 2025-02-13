@@ -15,7 +15,7 @@ The Noise Generator project is designed to create various types of noise for tex
 - Python 3.6 or higher
 - pandas
 - openpyxl
-- ... (add other dependencies as necessary)
+
 
 ## Installation
 1. Clone the repository:
